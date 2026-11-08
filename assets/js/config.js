@@ -3,6 +3,7 @@ export const SITE_CONFIG = {
   domain: "teste.local",
   publicSiteUrl: "/",
   adminSiteUrl: "/admin/",
+  integrationApiUrl: "",
   instagramUrl: "https://www.instagram.com/ministeriosev7en/",
   instagramHandle: "@ministeriosev7en",
   contatoEmail: "ministeriosev7enlouvor@gmail.com",
