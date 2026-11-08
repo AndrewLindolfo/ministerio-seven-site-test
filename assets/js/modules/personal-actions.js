@@ -1,0 +1,276 @@
+import { getCurrentPublicUser, requirePublicLogin, watchPublicAuth } from "../public-auth.js";
+import {
+  getUserLibrary,
+  toggleFavorite,
+  createPlaylist,
+  addItemToPlaylist
+} from "../services/user-library-service.js";
+
+let currentLibrary = { favorites: [], playlists: [] };
+let isReady = false;
+let playlistModalPreviousFocus = null;
+
+function $(selector) {
+  return document.querySelector(selector);
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function getItemFromElement(el) {
+  if (!el) return null;
+  return {
+    key: String(el.dataset.itemKey || "").trim(),
+    type: String(el.dataset.itemType || "").trim(),
+    title: String(el.dataset.itemTitle || "").trim(),
+    href: String(el.dataset.itemHref || "").trim(),
+    subtitle: String(el.dataset.itemSubtitle || "").trim(),
+    slug: String(el.dataset.itemSlug || "").trim(),
+    instrument: String(el.dataset.itemInstrument || "").trim()
+  };
+}
+
+function isFavoriteKey(key = "") {
+  return currentLibrary.favorites.some((item) => item.key === key);
+}
+
+function showLibraryError(error, fallback) {
+  const message = String(error?.message || "");
+  alert(message.startsWith("Limite de ") || message === "Playlist não encontrada." ? message : fallback);
+}
+
+function ensurePlaylistModal() {
+  if ($("#playlist-modal")) return;
+
+  const modal = document.createElement("div");
+  modal.id = "playlist-modal";
+  modal.className = "playlist-modal hidden";
+  modal.setAttribute("aria-hidden", "true");
+  modal.innerHTML = `
+    <div class="playlist-modal__overlay" data-close-playlist-modal="1"></div>
+    <div class="playlist-modal__panel" role="dialog" aria-modal="true" aria-labelledby="playlist-modal-title">
+      <button type="button" class="playlist-modal__close" data-close-playlist-modal="1" aria-label="Fechar">✕</button>
+      <h2 id="playlist-modal-title">Adicionar à playlist</h2>
+      <div id="playlist-modal-existing"></div>
+      <div class="playlist-modal__divider"></div>
+      <label class="playlist-modal__label">
+        <span>Nova playlist</span>
+        <input type="text" id="playlist-new-name" placeholder="Nome da playlist" maxlength="100" />
+      </label>
+      <div class="playlist-modal__actions">
+        <button type="button" id="playlist-create-button" class="playlist-modal__primary">Criar e adicionar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelectorAll("[data-close-playlist-modal='1']").forEach((node) => {
+    node.addEventListener("click", closePlaylistModal);
+  });
+
+  $("#playlist-create-button")?.addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    const user = getCurrentPublicUser();
+    if (!user?.uid) {
+      closePlaylistModal();
+      requirePublicLogin();
+      return;
+    }
+    const name = ($("#playlist-new-name")?.value || "").trim();
+    const item = modal._currentItem;
+    if (!name || !item) return;
+    button.disabled = true;
+    try {
+      const playlist = await createPlaylist(user.uid, name);
+      await addItemToPlaylist(user.uid, playlist.id, item);
+      await reloadLibrary();
+      closePlaylistModal();
+    } catch (error) {
+      console.error("Não foi possível criar a playlist.", error);
+      showLibraryError(error, "Não foi possível criar a playlist. Tente novamente.");
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+function renderPlaylistChoices() {
+  const box = $("#playlist-modal-existing");
+  if (!box) return;
+  box.replaceChildren();
+  if (!currentLibrary.playlists.length) {
+    const message = document.createElement("p");
+    message.className = "playlist-modal__empty";
+    message.textContent = "Nenhuma playlist criada ainda.";
+    box.appendChild(message);
+    return;
+  }
+  currentLibrary.playlists.forEach((playlist) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "playlist-modal__choice";
+    button.dataset.playlistChoice = playlist.id;
+    button.append(document.createTextNode(`${playlist.name} `));
+    const count = document.createElement("small");
+    count.textContent = `(${playlist.items.length})`;
+    button.appendChild(count);
+    button.addEventListener("click", async () => {
+      const user = getCurrentPublicUser();
+      const item = $("#playlist-modal")?._currentItem;
+      if (!user?.uid || !item) return;
+      button.disabled = true;
+      try {
+        await addItemToPlaylist(user.uid, button.dataset.playlistChoice, item);
+        await reloadLibrary();
+        closePlaylistModal();
+      } catch (error) {
+        console.error("Não foi possível adicionar o item à playlist.", error);
+        showLibraryError(error, "Não foi possível adicionar o item à playlist. Tente novamente.");
+      } finally {
+        button.disabled = false;
+      }
+    });
+    box.appendChild(button);
+  });
+}
+
+async function openPlaylistModal(item) {
+  ensurePlaylistModal();
+  await reloadLibrary();
+  const modal = $("#playlist-modal");
+  if (!modal) return;
+  playlistModalPreviousFocus = document.activeElement;
+  modal._currentItem = item;
+  const input = $("#playlist-new-name");
+  if (input) input.value = "";
+  renderPlaylistChoices();
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+  $("#playlist-new-name")?.focus();
+}
+
+function closePlaylistModal() {
+  const modal = $("#playlist-modal");
+  if (!modal || modal.classList.contains("hidden")) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+  if (playlistModalPreviousFocus instanceof HTMLElement) playlistModalPreviousFocus.focus();
+  playlistModalPreviousFocus = null;
+}
+
+export async function reloadLibrary() {
+  const user = getCurrentPublicUser();
+  currentLibrary = user?.uid ? await getUserLibrary(user.uid) : { favorites: [], playlists: [] };
+  refreshPersonalActionButtons();
+}
+
+export function refreshPersonalActionButtons(root = document) {
+  root.querySelectorAll("[data-favorite-button]").forEach((button) => {
+    const key = button.dataset.itemKey || "";
+    const active = isFavoriteKey(key);
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    button.setAttribute("aria-label", active ? "Remover dos favoritos" : "Adicionar aos favoritos");
+    button.title = active ? "Remover dos favoritos" : "Adicionar aos favoritos";
+  });
+}
+
+async function onFavoriteClick(button) {
+  const item = getItemFromElement(button);
+  if (!item?.key) return;
+  requirePublicLogin(async (user) => {
+    button.disabled = true;
+    try {
+      await toggleFavorite(user.uid, item);
+      await reloadLibrary();
+    } catch (error) {
+      console.error("Não foi possível atualizar os favoritos.", error);
+      showLibraryError(error, "Não foi possível atualizar os favoritos. Tente novamente.");
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+function onPlaylistClick(button) {
+  const item = getItemFromElement(button);
+  if (!item?.key) return;
+  requirePublicLogin(async () => {
+    await openPlaylistModal(item);
+  });
+}
+
+export function decoratePersonalButton(button, item = {}) {
+  if (!button) return;
+  button.dataset.itemKey = item.key || `${item.type}:${item.href}`;
+  button.dataset.itemType = item.type || "";
+  button.dataset.itemTitle = item.title || "";
+  button.dataset.itemHref = item.href || "";
+  button.dataset.itemSubtitle = item.subtitle || "";
+  button.dataset.itemSlug = item.slug || "";
+  button.dataset.itemInstrument = item.instrument || "";
+}
+
+export function createPersonalButtons(item = {}) {
+  const key = item.key || `${item.type}:${item.href}`;
+  return `
+    <button type="button" class="personal-action-btn personal-favorite-btn" data-favorite-button="1"
+      data-item-key="${escapeHtml(key)}"
+      data-item-type="${escapeHtml(item.type || "")}"
+      data-item-title="${escapeHtml(item.title || "")}"
+      data-item-href="${escapeHtml(item.href || "")}"
+      data-item-subtitle="${escapeHtml(item.subtitle || "")}"
+      data-item-slug="${escapeHtml(item.slug || "")}"
+      data-item-instrument="${escapeHtml(item.instrument || "")}"
+      aria-label="Favoritar">★</button>
+    <button type="button" class="personal-action-btn personal-playlist-btn" data-playlist-button="1"
+      data-item-key="${escapeHtml(key)}"
+      data-item-type="${escapeHtml(item.type || "")}"
+      data-item-title="${escapeHtml(item.title || "")}"
+      data-item-href="${escapeHtml(item.href || "")}"
+      data-item-subtitle="${escapeHtml(item.subtitle || "")}"
+      data-item-slug="${escapeHtml(item.slug || "")}"
+      data-item-instrument="${escapeHtml(item.instrument || "")}"
+      aria-label="Adicionar à playlist">＋</button>
+  `;
+}
+
+export function initPersonalActions() {
+  if (isReady) return;
+  isReady = true;
+  ensurePlaylistModal();
+
+  document.addEventListener("click", async (event) => {
+    const favoriteBtn = event.target.closest("[data-favorite-button]");
+    if (favoriteBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      await onFavoriteClick(favoriteBtn);
+      return;
+    }
+
+    const playlistBtn = event.target.closest("[data-playlist-button]");
+    if (playlistBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      onPlaylistClick(playlistBtn);
+      return;
+    }
+  });
+
+  watchPublicAuth(async () => {
+    await reloadLibrary();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closePlaylistModal();
+  });
+}

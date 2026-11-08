@@ -1,0 +1,8 @@
+node_modules/
+*-debug.log
+.firebase/
+.migration/
+.codex-remote-attachments/
+.env
+.env.*
+!.env.example
