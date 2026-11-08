@@ -3,6 +3,7 @@ node_modules/
 .firebase/
 .migration/
 .codex-remote-attachments/
+tmp/
 .env
 .env.*
 !.env.example
