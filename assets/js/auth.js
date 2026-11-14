@@ -32,8 +32,6 @@ async function finalizePendingAdmin(admin = null, user = null) {
     updatedAt: serverTimestamp()
   };
 
-  if (!admin.createdAt) payload.createdAt = serverTimestamp();
-
   await setDocument(ADMIN_COLLECTION, admin.id || buildAdminDocIdFromEmail(email), payload, { merge: true });
   return { ...admin, ...payload };
 }
