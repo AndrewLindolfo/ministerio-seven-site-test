@@ -6,6 +6,7 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getPublicUserProfile, normalizeProfilePhotoUrl, savePublicUserProfile } from "./services/public-user-service.js";
+import { getPublicSiteUrl } from "./config.js";
 
 let currentUser = null;
 let currentMenu = null;
@@ -70,7 +71,7 @@ function ensureAuthModal() {
       <h2 id="public-auth-modal-title">Entrar</h2>
       <p class="public-auth-modal__text">Faça login para acessar favoritos, playlists e recursos pessoais do site.</p>
       <button type="button" id="public-google-login-button" class="public-auth-modal__google-btn">
-        <span class="public-auth-modal__google-icon" aria-hidden="true"><img src="/assets/img/ui/logo-g-login.png" alt="" class="public-auth-modal__google-image" /></span>
+        <span class="public-auth-modal__google-icon" aria-hidden="true"><img src="${getPublicSiteUrl("assets/img/ui/logo-g-login.png")}" alt="" class="public-auth-modal__google-image" /></span>
         <span>Continuar com Google</span>
       </button>
       <p class="public-auth-modal__footnote">O login não é obrigatório para navegar no site. Ele é usado apenas para recursos pessoais.</p>
@@ -152,7 +153,7 @@ async function buildProfileData(user) {
   return {
     uid: user?.uid || "",
     email,
-    photoURL: normalizeProfilePhotoUrl(profile?.photoURL || user?.photoURL) || "/assets/img/v7/icon_120.png",
+    photoURL: normalizeProfilePhotoUrl(profile?.photoURL || user?.photoURL) || getPublicSiteUrl("assets/img/v7/icon_120.png"),
     firstName,
     lastName,
     displayName: profile?.displayName || user?.displayName || [firstName, lastName].filter(Boolean).join(" "),
@@ -165,8 +166,8 @@ async function buildProfileData(user) {
 async function renderLoggedOut(slot) {
   slot.innerHTML = `
     <button type="button" id="public-login-button" class="public-login-button public-login-button--image-only" aria-label="Entrar">
-      <img src="/assets/img/ui/login-user-preto.png" alt="Entrar" class="public-login-button__image public-login-button__image--light" />
-      <img src="/assets/img/ui/login-user-branco.png" alt="Entrar" class="public-login-button__image public-login-button__image--dark" />
+      <img src="${getPublicSiteUrl("assets/img/ui/login-user-preto.png")}" alt="Entrar" class="public-login-button__image public-login-button__image--light" />
+      <img src="${getPublicSiteUrl("assets/img/ui/login-user-branco.png")}" alt="Entrar" class="public-login-button__image public-login-button__image--dark" />
     </button>`;
   $("#public-login-button")?.addEventListener("click", openPublicAuthModal);
 }

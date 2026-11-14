@@ -1,9 +1,9 @@
 export const SITE_CONFIG = {
   siteName: "Ministério Seven — Testes",
-  domain: "teste.local",
-  publicSiteUrl: "/",
-  adminSiteUrl: "/admin/",
-  integrationApiUrl: "/api",
+  domain: "andrewlindolfo.github.io",
+  publicSiteUrl: "https://andrewlindolfo.github.io/ministerio-seven-site-test/",
+  adminSiteUrl: "https://andrewlindolfo.github.io/ministerio-seven-site-test/admin/",
+  integrationApiUrl: "",
   instagramUrl: "https://www.instagram.com/ministeriosev7en/",
   instagramHandle: "@ministeriosev7en",
   contatoEmail: "ministeriosev7enlouvor@gmail.com",
@@ -19,3 +19,11 @@ export const SITE_CONFIG = {
     contatos: "contatos"
   }
 };
+
+export function getPublicSiteUrl(path = "") {
+  return new URL(String(path).replace(/^\/+/, ""), SITE_CONFIG.publicSiteUrl).href;
+}
+
+export function getAdminSiteUrl(path = "") {
+  return new URL(String(path).replace(/^\/+/, ""), SITE_CONFIG.adminSiteUrl).href;
+}

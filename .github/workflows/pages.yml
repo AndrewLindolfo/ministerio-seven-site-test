@@ -1,0 +1,68 @@
+name: Publicar site de testes no GitHub Pages
+
+on:
+  push:
+    branches: [codex/test-site]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v6
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Preparar arquivos públicos
+        run: |
+          mkdir -p _site
+          rsync -a ./ _site/ \
+            --exclude '/_site/' \
+            --exclude '/.git/' \
+            --exclude '/.github/' \
+            --exclude '/.firebase/' \
+            --exclude '/.vscode/' \
+            --exclude '/.migration/' \
+            --exclude '/.codex-remote-attachments/' \
+            --exclude '/node_modules/' \
+            --exclude '/functions/' \
+            --exclude '/tests/' \
+            --exclude '/scripts/' \
+            --exclude '/tmp/' \
+            --exclude '/docs/' \
+            --exclude '/firebase.json' \
+            --exclude '/.firebaserc' \
+            --exclude '/firestore.rules' \
+            --exclude '/firestore.indexes.json' \
+            --exclude '/storage.rules' \
+            --exclude '/package.json' \
+            --exclude '/package-lock.json' \
+            --exclude '/*-debug.log'
+          touch _site/.nojekyll
+
+      - name: Enviar artefato do site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

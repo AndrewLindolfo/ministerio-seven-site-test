@@ -1,6 +1,7 @@
 import { auth, provider } from "./firebase.js";
 import { getDocument, setDocument, serverTimestamp } from "./db.js";
 import { buildAdminDocIdFromEmail } from "./services/admin-permissions-service.js";
+import { getAdminSiteUrl, getPublicSiteUrl } from "./config.js";
 import {
   signInWithPopup,
   signInWithEmailAndPassword,
@@ -125,7 +126,7 @@ export async function loginWithGoogle() {
   try {
     const result = await signInWithPopup(auth, provider);
     await completeAdminLogin(result.user);
-    window.location.href = "/admin/index.html";
+    window.location.href = getAdminSiteUrl("index.html");
   } catch (error) {
     console.error("Erro no login:", error);
     throw error;
@@ -136,7 +137,7 @@ export async function loginWithEmailPassword(email = "", password = "") {
   try {
     const result = await signInWithEmailAndPassword(auth, normalize(email), String(password));
     await completeAdminLogin(result.user);
-    window.location.href = "/admin/index.html";
+    window.location.href = getAdminSiteUrl("index.html");
   } catch (error) {
     console.error("Erro no login:", error);
     throw error;
@@ -164,7 +165,7 @@ async function completeAdminLogin(user) {
 export async function logout() {
   persistAdminIdentity(null, null);
   await signOut(auth);
-  window.location.href = "/login.html";
+  window.location.href = getPublicSiteUrl("login.html");
 }
 
 export function watchAuth(callback) {

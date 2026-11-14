@@ -1,5 +1,6 @@
 import { getCurrentPublicUser, openPublicAuthModal, watchPublicAuth } from "../public-auth.js";
 import { normalizeProfilePhotoUrl, savePublicUserProfile } from "../services/public-user-service.js";
+import { getPublicSiteUrl } from "../config.js";
 
 function $(selector) {
   return document.querySelector(selector);
@@ -11,10 +12,11 @@ function fillProfile(user, profile = null) {
   const displayName = profile?.displayName || user?.displayName || [firstName, lastName].filter(Boolean).join(" ");
   const email = profile?.email || user?.email || "";
   const phone = profile?.phone || "";
-  const photoURL = normalizeProfilePhotoUrl(profile?.photoURL || user?.photoURL) || "/assets/img/v7/icon_120.png";
+  const fallbackPhotoUrl = getPublicSiteUrl("assets/img/v7/icon_120.png");
+  const photoURL = normalizeProfilePhotoUrl(profile?.photoURL || user?.photoURL) || fallbackPhotoUrl;
 
   $("#conta-photo").src = photoURL;
-  $("#conta-photo").onerror = () => { $("#conta-photo").src = "/assets/img/v7/icon_120.png"; };
+  $("#conta-photo").onerror = () => { $("#conta-photo").src = fallbackPhotoUrl; };
   $("#conta-display-name").textContent = displayName || "Minha conta";
   $("#conta-status").textContent = email || "Usuário autenticado";
   $("#conta-first-name").value = firstName;

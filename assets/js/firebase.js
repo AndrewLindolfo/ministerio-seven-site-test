@@ -4,12 +4,12 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebas
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
-  apiKey: "TEST_PROJECT_NOT_CONFIGURED",
-  authDomain: "ministerio-seven-test-not-configured.firebaseapp.com",
-  projectId: "ministerio-seven-test-not-configured",
-  storageBucket: "",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:testnotconfigured"
+  apiKey: "AIzaSyD1i_AwLX2VvOVOFnuIhimZoLDc85cds3Y",
+  authDomain: "ministerio-seven-teste.firebaseapp.com",
+  projectId: "ministerio-seven-teste",
+  storageBucket: "ministerio-seven-teste.firebasestorage.app",
+  messagingSenderId: "563867930059",
+  appId: "1:563867930059:web:725ad34b931a583cd37a4e"
 };
 
 const app = initializeApp(firebaseConfig);

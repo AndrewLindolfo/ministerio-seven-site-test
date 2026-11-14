@@ -1,5 +1,6 @@
 import { logout, watchAuth, validateAdminUser } from "./auth.js";
 import { canAccessAdminPage } from "./services/admin-permissions-service.js";
+import { getAdminSiteUrl, getPublicSiteUrl } from "./config.js";
 
 function resolveAdminPageKey() {
   const path = window.location.pathname.toLowerCase();
@@ -28,7 +29,7 @@ function resolveAdminPageKey() {
 export function protectAdminPage() {
   watchAuth(async (user) => {
     if (!user) {
-      window.location.href = "/login.html";
+      window.location.href = getPublicSiteUrl("login.html");
       return;
     }
 
@@ -47,12 +48,12 @@ export function protectAdminPage() {
       const pageKey = resolveAdminPageKey();
       if (!canAccessAdminPage(validation.admin, pageKey)) {
         alert("Você não tem permissão para acessar esta página.");
-        window.location.href = "/admin/index.html";
+        window.location.href = getAdminSiteUrl("index.html");
       }
     } catch (error) {
       console.error("Erro ao validar acesso administrativo:", error);
       alert("Não foi possível validar o acesso administrativo.");
-      window.location.href = "/login.html";
+      window.location.href = getPublicSiteUrl("login.html");
     }
   });
 }

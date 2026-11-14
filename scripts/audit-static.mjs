@@ -55,6 +55,8 @@ for (const file of htmlFiles) {
   }
 
   for (const match of source.matchAll(/\b(?:href|src)\s*=\s*["']([^"']+)["']/gi)) {
+    const openingTag = source.slice(source.lastIndexOf("<", match.index), match.index);
+    if (/^<base\b/i.test(openingTag)) continue;
     const target = resolveLocalReference(file, match[1]);
     if (target && !existsSync(target)) {
       missingReferences.push({ file: projectPath(file), reference: match[1] });
